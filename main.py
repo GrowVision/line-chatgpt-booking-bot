@@ -59,4 +59,5 @@ def reply(reply_token, text):
     requests.post("https://api.line.me/v2/bot/message/reply", headers=headers, json=body)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=10000)
+
