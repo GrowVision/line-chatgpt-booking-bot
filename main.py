@@ -9,32 +9,29 @@ from dotenv import load_dotenv
 app = Flask(__name__)
 load_dotenv()
 
-# ✅ Renderで登録した環境変数の読み取り
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 openai.api_key = OPENAI_API_KEY
 
-@app.route("/", methods=['POST'])
+@app.route("/", methods=['GET', 'POST'])
 def webhook():
+    if request.method == 'GET':
+        return "OK", 200  # ←これがVerifyに必要な返答！
+
+    # POST時の処理（LINEからのメッセージ）
     event = request.json['events'][0]
     if event['type'] == 'message':
         msg_type = event['message']['type']
         reply_token = event['replyToken']
 
         if msg_type == 'image':
-            # ✅ 画像を取得してbase64変換
             message_id = event['message']['id']
             headers = {
                 "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
             }
-            image_binary = requests.get(
-                f"https://api-data.line.me/v2/bot/message/{message_id}/content",
-                headers=headers
-            ).content
+            image_binary = requests.get(f"https://api-data.line.me/v2/bot/message/{message_id}/content", headers=headers).content
             image_b64 = base64.b64encode(image_binary).decode("utf-8")
-
-            # ✅ ChatGPT Visionへ画像解析リクエスト
             response = openai.ChatCompletion.create(
                 model="gpt-4-vision-preview",
                 messages=[
@@ -47,18 +44,9 @@ def webhook():
             )
             reply_text = response["choices"][0]["message"]["content"]
         elif msg_type == 'text':
-            # ✅ テキストにもChatGPTで返答（オプション）
-            user_message = event['message']['text']
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "user", "content": user_message}
-                ],
-                max_tokens=200
-            )
-            reply_text = response["choices"][0]["message"]["content"]
+            reply_text = "画像を送ると、AIが予約状況を読み取ってお返事します！"
         else:
-            reply_text = "画像かテキストを送ってください。"
+            reply_text = "画像を送ってください。"
 
         reply(reply_token, reply_text)
     return 'OK'
@@ -74,7 +62,11 @@ def reply(reply_token, text):
             {"type": "text", "text": text}
         ]
     }
-    requests.post("https://api.line.me/v2/bot/message/reply", headers=headers, json=body)
+    res = requests.post("https://api.line.me/v2/bot/message/reply", headers=headers, json=body)
+    print("LINE返信ステータス:", res.status_code)
+    print("LINE返信レスポンス:", res.text)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))  # ←②ここも環境変数PORTに変更！
+    app.run(host="0.0.0.0", port=port)
+
