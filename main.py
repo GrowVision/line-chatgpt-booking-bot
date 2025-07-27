@@ -14,7 +14,7 @@ LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 openai.api_key = OPENAI_API_KEY
 
-# 環境変数チェック用（確認後は削除してOK）
+# デバッグ用: 環境変数が読み込まれているか確認
 print("✅ OPENAI_API_KEY:", OPENAI_API_KEY[:8] if OPENAI_API_KEY else "None")
 print("✅ LINE_CHANNEL_SECRET:", LINE_CHANNEL_SECRET[:8] if LINE_CHANNEL_SECRET else "None")
 print("✅ LINE_CHANNEL_ACCESS_TOKEN:", LINE_CHANNEL_ACCESS_TOKEN[:8] if LINE_CHANNEL_ACCESS_TOKEN else "None")
@@ -25,7 +25,10 @@ def webhook():
         return "OK", 200  # LINE Verify用のGETリクエスト対応
 
     try:
-        event = request.json['events'][0]
+        body = request.get_json()
+        print("📩 受信したリクエスト:", body)
+
+        event = body['events'][0]
         if event['type'] == 'message':
             msg_type = event['message']['type']
             reply_token = event['replyToken']
@@ -35,10 +38,7 @@ def webhook():
                 headers = {
                     "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
                 }
-                image_binary = requests.get(
-                    f"https://api-data.line.me/v2/bot/message/{message_id}/content",
-                    headers=headers
-                ).content
+                image_binary = requests.get(f"https://api-data.line.me/v2/bot/message/{message_id}/content", headers=headers).content
                 image_b64 = base64.b64encode(image_binary).decode("utf-8")
                 response = openai.ChatCompletion.create(
                     model="gpt-4-vision-preview",
