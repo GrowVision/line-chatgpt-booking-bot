@@ -28,6 +28,11 @@ def webhook():
         body = request.get_json()
         print("📩 受信したリクエスト:", body)
 
+        # 'events' キーが存在するかをチェック
+        if 'events' not in body or len(body['events']) == 0:
+            print("[⚠️ イベントなし] 'events' キーが見つかりません")
+            return "No events", 200
+
         event = body['events'][0]
         if event['type'] == 'message':
             msg_type = event['message']['type']
@@ -57,6 +62,7 @@ def webhook():
                 reply_text = "画像を送ってください。"
 
             reply(reply_token, reply_text)
+
     except Exception as e:
         print("[❌ エラー]", e)
         return "Internal Server Error", 500
