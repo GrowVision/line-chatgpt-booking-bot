@@ -1,11 +1,11 @@
 # main.py
 from flask import Flask, request, abort
 import os
-import openai
 import requests
 import base64
 import threading
 from dotenv import load_dotenv
+from openai import OpenAI
 
 app = Flask(__name__)
 load_dotenv()
@@ -13,7 +13,8 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-openai.api_key = OPENAI_API_KEY
+
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # デバッグ用: 環境変数が読み込まれているか確認
 print("✅ OPENAI_API_KEY:", OPENAI_API_KEY[:8] if OPENAI_API_KEY else "None")
@@ -29,12 +30,10 @@ def webhook():
         body = request.get_json()
         print("📩 受信したリクエスト:", body)
 
-        # 'events' キーが存在するかをチェック
         if 'events' not in body or len(body['events']) == 0:
             print("[⚠️ イベントなし] 'events' キーが見つかりません")
             return "No events", 200
 
-        # 並列でイベント処理
         threading.Thread(target=handle_event, args=(body,)).start()
         return "OK", 200
 
@@ -61,17 +60,20 @@ def handle_event(body):
                 }
                 image_binary = requests.get(f"https://api-data.line.me/v2/bot/message/{message_id}/content", headers=headers).content
                 image_b64 = base64.b64encode(image_binary).decode("utf-8")
-                response = openai.ChatCompletion.create(
+                response = client.chat.completions.create(
                     model="gpt-4-vision-preview",
                     messages=[
-                        {"role": "user", "content": [
-                            {"type": "text", "text": "この画像は飲食店の予約表です。何時に何席空いているか読み取ってください。"},
-                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}}
-                        ]}
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": "この画像は飲食店の予約表です。何時に何席空いているか読み取ってください。"},
+                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}}
+                            ]
+                        }
                     ],
                     max_tokens=500
                 )
-                reply_text = response["choices"][0]["message"]["content"]
+                reply_text = response.choices[0].message.content
             elif msg_type == 'text':
                 reply_text = "画像を送ると、AIが予約状況を読み取ってお返事します！"
             else:
