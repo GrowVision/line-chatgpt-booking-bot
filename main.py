@@ -1,5 +1,5 @@
 # main.py
-from flask import Flask, request, abort
+from flask import Flask, request
 import os
 import requests
 import base64
@@ -23,8 +23,8 @@ print("✅ LINE_CHANNEL_ACCESS_TOKEN:", LINE_CHANNEL_ACCESS_TOKEN[:8] if LINE_CH
 
 @app.route("/", methods=['GET', 'HEAD', 'POST'])
 def webhook():
-    if request.method == 'GET' or request.method == 'HEAD':
-        return "OK", 200  # LINE Verify用のGET/HEAD対応
+    if request.method in ['GET', 'HEAD']:
+        return "OK", 200  # LINE Verify用
 
     try:
         body = request.get_json()
@@ -58,10 +58,12 @@ def handle_event(body):
                 headers = {
                     "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
                 }
-                image_response = requests.get(f"https://api-data.line.me/v2/bot/message/{message_id}/content", headers=headers)
+                image_response = requests.get(
+                    f"https://api-data.line.me/v2/bot/message/{message_id}/content", headers=headers)
                 image_binary = image_response.content
                 mime_type = image_response.headers.get('Content-Type', 'image/jpeg')
                 image_b64 = base64.b64encode(image_binary).decode("utf-8")
+
                 response = client.chat.completions.create(
                     model="gpt-4-vision-preview",
                     messages=[
@@ -75,7 +77,12 @@ def handle_event(body):
                     ],
                     max_tokens=500
                 )
+
+                # ✅ OpenAIの応答内容を表示（ここが今回の追加）
+                print("🧠 OpenAIのレスポンス内容:", response)
+
                 reply_text = response.choices[0].message.content
+
             elif msg_type == 'text':
                 reply_text = "画像を送ると、AIが予約状況を読み取ってお返事します！"
             else:
@@ -83,6 +90,7 @@ def handle_event(body):
 
             print("✅ 返信内容:", reply_text)
             reply(reply_token, reply_text)
+
     except Exception as e:
         print("[❌ handle_eventエラー]", e)
 
@@ -104,3 +112,4 @@ def reply(reply_token, text):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
