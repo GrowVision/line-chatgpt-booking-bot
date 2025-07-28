@@ -4,6 +4,7 @@ import os
 import openai
 import requests
 import base64
+import threading
 from dotenv import load_dotenv
 
 app = Flask(__name__)
@@ -33,6 +34,16 @@ def webhook():
             print("[⚠️ イベントなし] 'events' キーが見つかりません")
             return "No events", 200
 
+        # 並列でイベント処理
+        threading.Thread(target=handle_event, args=(body,)).start()
+        return "OK", 200
+
+    except Exception as e:
+        print("[❌ エラー]", e)
+        return "Internal Server Error", 500
+
+def handle_event(body):
+    try:
         event = body['events'][0]
         if event['type'] == 'message':
             msg_type = event['message']['type']
@@ -62,12 +73,8 @@ def webhook():
                 reply_text = "画像を送ってください。"
 
             reply(reply_token, reply_text)
-
     except Exception as e:
-        print("[❌ エラー]", e)
-        return "Internal Server Error", 500
-
-    return 'OK', 200
+        print("[❌ handle_eventエラー]", e)
 
 def reply(reply_token, text):
     headers = {
