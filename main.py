@@ -1,4 +1,3 @@
-# main.py
 from flask import Flask, request
 import os
 import requests
@@ -34,6 +33,7 @@ def webhook():
             print("[⚠️ イベントなし] 'events' キーが見つかりません")
             return "No events", 200
 
+        print("✅ eventsキーがありました。handle_event()へ渡します")  # ←追加
         threading.Thread(target=handle_event, args=(body,)).start()
         return "OK", 200
 
@@ -43,7 +43,7 @@ def webhook():
 
 def handle_event(body):
     try:
-        print("✅ handle_event 呼び出し成功:", body)
+        print("✅ handle_event 呼び出し成功:", body)  # ←追加
         event = body['events'][0]
         print("✅ event:", event)
 
@@ -78,9 +78,7 @@ def handle_event(body):
                     max_tokens=500
                 )
 
-                # ✅ OpenAIの応答内容を表示（ここが今回の追加）
                 print("🧠 OpenAIのレスポンス内容:", response)
-
                 reply_text = response.choices[0].message.content
 
             elif msg_type == 'text':
@@ -112,4 +110,3 @@ def reply(reply_token, text):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
