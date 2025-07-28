@@ -33,7 +33,7 @@ def webhook():
             print("[⚠️ イベントなし] 'events' キーが見つかりません")
             return "No events", 200
 
-        print("✅ eventsキーがありました。handle_event()へ渡します")  # ←追加
+        print("✅ eventsキーがありました。handle_event()へ渡します")
         threading.Thread(target=handle_event, args=(body,)).start()
         return "OK", 200
 
@@ -43,7 +43,7 @@ def webhook():
 
 def handle_event(body):
     try:
-        print("✅ handle_event 呼び出し成功:", body)  # ←追加
+        print("✅ handle_event 呼び出し成功:", body)
         event = body['events'][0]
         print("✅ event:", event)
 
@@ -65,7 +65,7 @@ def handle_event(body):
                 image_b64 = base64.b64encode(image_binary).decode("utf-8")
 
                 response = client.chat.completions.create(
-                    model="gpt-4-vision-preview",
+                    model="gpt-4o",  # ✅ 最新モデルに更新
                     messages=[
                         {
                             "role": "user",
