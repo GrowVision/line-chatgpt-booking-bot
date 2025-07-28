@@ -20,10 +20,10 @@ print("✅ OPENAI_API_KEY:", OPENAI_API_KEY[:8] if OPENAI_API_KEY else "None")
 print("✅ LINE_CHANNEL_SECRET:", LINE_CHANNEL_SECRET[:8] if LINE_CHANNEL_SECRET else "None")
 print("✅ LINE_CHANNEL_ACCESS_TOKEN:", LINE_CHANNEL_ACCESS_TOKEN[:8] if LINE_CHANNEL_ACCESS_TOKEN else "None")
 
-@app.route("/", methods=['GET', 'POST'])
+@app.route("/", methods=['GET', 'HEAD', 'POST'])
 def webhook():
-    if request.method == 'GET':
-        return "OK", 200  # LINE Verify用のGETリクエスト対応
+    if request.method == 'GET' or request.method == 'HEAD':
+        return "OK", 200  # LINE Verify用のGET/HEAD対応
 
     try:
         body = request.get_json()
@@ -39,17 +39,22 @@ def webhook():
         return "OK", 200
 
     except Exception as e:
-        print("[❌ エラー]", e)
+        print("[❌ webhookエラー]", e)
         return "Internal Server Error", 500
 
 def handle_event(body):
     try:
+        print("✅ handle_event 呼び出し成功:", body)
         event = body['events'][0]
+        print("✅ event:", event)
+
         if event['type'] == 'message':
             msg_type = event['message']['type']
             reply_token = event['replyToken']
+            print("✅ message type:", msg_type)
 
             if msg_type == 'image':
+                print("✅ 画像処理開始")
                 message_id = event['message']['id']
                 headers = {
                     "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
@@ -72,6 +77,7 @@ def handle_event(body):
             else:
                 reply_text = "画像を送ってください。"
 
+            print("✅ 返信内容:", reply_text)
             reply(reply_token, reply_text)
     except Exception as e:
         print("[❌ handle_eventエラー]", e)
