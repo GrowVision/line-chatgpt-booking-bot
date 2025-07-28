@@ -58,7 +58,9 @@ def handle_event(body):
                 headers = {
                     "Authorization": f"Bearer {LINE_CHANNEL_ACCESS_TOKEN}"
                 }
-                image_binary = requests.get(f"https://api-data.line.me/v2/bot/message/{message_id}/content", headers=headers).content
+                image_response = requests.get(f"https://api-data.line.me/v2/bot/message/{message_id}/content", headers=headers)
+                image_binary = image_response.content
+                mime_type = image_response.headers.get('Content-Type', 'image/jpeg')
                 image_b64 = base64.b64encode(image_binary).decode("utf-8")
                 response = client.chat.completions.create(
                     model="gpt-4-vision-preview",
@@ -67,7 +69,7 @@ def handle_event(body):
                             "role": "user",
                             "content": [
                                 {"type": "text", "text": "この画像は飲食店の予約表です。何時に何席空いているか読み取ってください。"},
-                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"}}
+                                {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{image_b64}"}}
                             ]
                         }
                     ],
